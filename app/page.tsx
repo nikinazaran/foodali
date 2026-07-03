@@ -47,8 +47,50 @@ function formatQuantity(quantity: number | null, unit: string | null) {
   return unit ? `${quantity} ${unit}` : `${quantity}`;
 }
 
+const SUPABASE_CONFIG_STORAGE_KEY = "foodali.supabase-config";
+const DEFAULT_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+const DEFAULT_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
 export default function Home() {
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const [supabaseUrlDraft, setSupabaseUrlDraft] = useState(DEFAULT_SUPABASE_URL);
+  const [supabaseAnonKeyDraft, setSupabaseAnonKeyDraft] = useState(DEFAULT_SUPABASE_ANON_KEY);
+  const [supabaseConfigMessage, setSupabaseConfigMessage] = useState("");
+  const [supabaseConfigError, setSupabaseConfigError] = useState("");
+
+  useEffect(() => {
+    try {
+      const savedConfig = window.localStorage.getItem(SUPABASE_CONFIG_STORAGE_KEY);
+
+      if (!savedConfig) {
+        return;
+      }
+
+      const parsedConfig = JSON.parse(savedConfig) as {
+        supabaseUrl?: string;
+        supabaseAnonKey?: string;
+      };
+
+      if (typeof parsedConfig.supabaseUrl === "string" && parsedConfig.supabaseUrl.trim()) {
+        setSupabaseUrlDraft(parsedConfig.supabaseUrl.trim());
+      }
+
+      if (typeof parsedConfig.supabaseAnonKey === "string" && parsedConfig.supabaseAnonKey.trim()) {
+        setSupabaseAnonKeyDraft(parsedConfig.supabaseAnonKey.trim());
+      }
+    } catch {
+      // Ignore malformed local configuration and fall back to env values.
+    }
+  }, []);
+
+  const supabase = useMemo(() => {
+    const supabaseUrl = supabaseUrlDraft.trim();
+    const supabaseAnonKey = supabaseAnonKeyDraft.trim();
+
+    return getSupabaseBrowserClient(
+      supabaseUrl && supabaseAnonKey ? { supabaseUrl, supabaseAnonKey } : {}
+    );
+  }, [supabaseAnonKeyDraft, supabaseUrlDraft]);
+
   const [session, setSession] = useState<Session | null>(null);
   const [authEmail, setAuthEmail] = useState("");
   const [authMessage, setAuthMessage] = useState("");
@@ -135,7 +177,9 @@ export default function Home() {
     event.preventDefault();
 
     if (!supabase) {
-      setAuthError("Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY first.");
+      setAuthError(
+        "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local, or save them in the setup form first."
+      );
       return;
     }
 
@@ -158,6 +202,33 @@ export default function Home() {
     }
 
     setIsSendingLink(false);
+  }
+
+  async function handleSaveSupabaseConfig(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const supabaseUrl = supabaseUrlDraft.trim();
+    const supabaseAnonKey = supabaseAnonKeyDraft.trim();
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      setSupabaseConfigError("Paste both the Supabase project URL and anon key.");
+      setSupabaseConfigMessage("");
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        SUPABASE_CONFIG_STORAGE_KEY,
+        JSON.stringify({ supabaseUrl, supabaseAnonKey })
+      );
+      setSupabaseUrlDraft(supabaseUrl);
+      setSupabaseAnonKeyDraft(supabaseAnonKey);
+      setSupabaseConfigError("");
+      setSupabaseConfigMessage("Supabase settings saved locally. You can send a login link now.");
+    } catch {
+      setSupabaseConfigError("Could not save the local Supabase settings in this browser.");
+      setSupabaseConfigMessage("");
+    }
   }
 
   async function handleSignOut() {
@@ -281,27 +352,79 @@ export default function Home() {
               </button>
             </div>
           ) : (
-            <form className="mt-4 space-y-4" onSubmit={handleSendLoginLink}>
-              <p className="font-[family-name:var(--font-display)] text-3xl leading-tight">Sign in to save your pantry</p>
-              <label className="block">
-                <span className="mb-2 block text-sm text-background/70">Email address</span>
-                <input
-                  type="email"
-                  value={authEmail}
-                  onChange={(event) => setAuthEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-background outline-none transition placeholder:text-background/40 focus:border-white/30"
-                />
-              </label>
-              <button
-                type="submit"
-                disabled={isSendingLink}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Send login link
-              </button>
-              <p className="text-sm text-background/70">Magic-link auth gives you Supabase-backed pantry data per account.</p>
-            </form>
+            <div className="mt-4 space-y-4">
+              <div className="space-y-2">
+                <p className="font-[family-name:var(--font-display)] text-3xl leading-tight">Sign in to save your pantry</p>
+                <p className="text-sm text-background/70">
+                  Magic-link auth gives you Supabase-backed pantry data per account.
+                </p>
+              </div>
+
+              {!supabase ? (
+                <form className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-4" onSubmit={handleSaveSupabaseConfig}>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-background">Connect Supabase first</p>
+                    <p className="text-sm text-background/70">
+                      Paste the project URL and anon key from your Supabase dashboard, then save them locally in this browser.
+                    </p>
+                  </div>
+                  <label className="block">
+                    <span className="mb-2 block text-sm text-background/70">Supabase project URL</span>
+                    <input
+                      type="url"
+                      value={supabaseUrlDraft}
+                      onChange={(event) => setSupabaseUrlDraft(event.target.value)}
+                      placeholder="https://your-project.supabase.co"
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-background outline-none transition placeholder:text-background/40 focus:border-white/30"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm text-background/70">Supabase anon key</span>
+                    <input
+                      type="password"
+                      value={supabaseAnonKeyDraft}
+                      onChange={(event) => setSupabaseAnonKeyDraft(event.target.value)}
+                      placeholder="eyJ..."
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-background outline-none transition placeholder:text-background/40 focus:border-white/30"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-foreground transition hover:opacity-90"
+                  >
+                    Save Supabase settings
+                  </button>
+                  <p className="text-xs leading-5 text-background/60">
+                    If you prefer, you can still put the same values in .env.local and restart the dev server.
+                  </p>
+                  {(supabaseConfigError || supabaseConfigMessage) && (
+                    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-background/80">
+                      {supabaseConfigError || supabaseConfigMessage}
+                    </div>
+                  )}
+                </form>
+              ) : (
+                <form className="space-y-4" onSubmit={handleSendLoginLink}>
+                  <label className="block">
+                    <span className="mb-2 block text-sm text-background/70">Email address</span>
+                    <input
+                      type="email"
+                      value={authEmail}
+                      onChange={(event) => setAuthEmail(event.target.value)}
+                      placeholder="you@example.com"
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm text-background outline-none transition placeholder:text-background/40 focus:border-white/30"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={isSendingLink}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-background px-4 py-3 text-sm font-medium text-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Send login link
+                  </button>
+                </form>
+              )}
+            </div>
           )}
 
           <div className="mt-6 space-y-3 text-sm text-background/80">

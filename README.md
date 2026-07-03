@@ -13,7 +13,7 @@ Foodali is a personal meal-planning app for deciding what to cook with the ingre
 ## Local setup
 
 1. Install dependencies.
-2. Copy `.env.example` to `.env.local` and fill in your Supabase values.
+2. Copy `.env.example` to `.env.local` and fill in your Supabase values, or paste the project URL and anon key into the in-app Supabase setup card on the home page.
 3. Run the SQL in `supabase/schema.sql` inside the Supabase SQL editor to create the pantry tables, recipe tables, row-level security policies, and the `recipe-images` bucket.
 4. Run the app with `npm run dev`.
 
