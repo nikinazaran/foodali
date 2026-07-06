@@ -3,23 +3,23 @@
 @tailwind utilities;
 
 :root {
-  --background: 40 40% 97%;
-  --foreground: 145 24% 12%;
+  --background: 36 80% 96%;
+  --foreground: 19 38% 16%;
   --card: 0 0% 100%;
-  --card-foreground: 145 24% 12%;
+  --card-foreground: 19 38% 16%;
   --popover: 0 0% 100%;
-  --popover-foreground: 145 24% 12%;
-  --primary: 146 40% 20%;
+  --popover-foreground: 19 38% 16%;
+  --primary: 11 78% 45%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 38 45% 92%;
-  --secondary-foreground: 145 24% 18%;
-  --muted: 43 25% 94%;
-  --muted-foreground: 145 10% 40%;
-  --accent: 27 66% 87%;
-  --accent-foreground: 145 24% 18%;
-  --border: 140 18% 86%;
-  --input: 140 18% 86%;
-  --ring: 146 40% 20%;
+  --secondary: 39 88% 88%;
+  --secondary-foreground: 18 48% 20%;
+  --muted: 33 58% 91%;
+  --muted-foreground: 20 22% 42%;
+  --accent: 47 92% 70%;
+  --accent-foreground: 20 42% 18%;
+  --border: 24 42% 82%;
+  --input: 24 42% 82%;
+  --ring: 11 78% 45%;
 }
 
 @layer base {
@@ -34,8 +34,11 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image:
-      radial-gradient(circle at top left, rgba(200, 218, 193, 0.45), transparent 26%),
-      radial-gradient(circle at top right, rgba(250, 214, 168, 0.35), transparent 22%),
-      linear-gradient(180deg, rgba(255, 255, 252, 0.98), rgba(247, 244, 236, 1));
+      linear-gradient(rgba(121, 55, 24, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(121, 55, 24, 0.035) 1px, transparent 1px),
+      radial-gradient(circle at 10% 0%, rgba(255, 198, 110, 0.36), transparent 28%),
+      radial-gradient(circle at 88% 8%, rgba(223, 84, 55, 0.18), transparent 26%),
+      linear-gradient(180deg, rgba(255, 249, 238, 0.98), rgba(248, 232, 202, 1));
+    background-size: 28px 28px, 28px 28px, auto, auto, auto;
   }
 }
